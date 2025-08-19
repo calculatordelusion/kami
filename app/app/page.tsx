@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import NextImage from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -54,7 +54,7 @@ const Page = () => {
         const imageUrl = URL.createObjectURL(file);
 
         // Read natural dimensions so preview and canvas use original pixels
-        const probe = new Image();
+        const probe = new window.Image();
         probe.onload = () => {
             setImgWidth(probe.naturalWidth);
             setImgHeight(probe.naturalHeight);
@@ -254,7 +254,7 @@ const Page = () => {
                                 style={{ width: previewWidth, height: previewHeight }}
                             >
                                 {isImageSetupDone ? (
-                                    <Image
+                                    <NextImage
                                         src={selectedImage}
                                         alt="Uploaded"
                                         width={imgWidth ?? 0}
@@ -297,7 +297,7 @@ const Page = () => {
                                         </div>
                                     ))}
                                 {isImageSetupDone && removedBgImageUrl && (
-                                    <Image
+                                    <NextImage
                                         src={removedBgImageUrl}
                                         alt="Subject"
                                         width={imgWidth ?? 0}
