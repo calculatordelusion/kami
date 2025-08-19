@@ -53,7 +53,7 @@ const Page = () => {
 
         const imageUrl = URL.createObjectURL(file);
 
-        // Read natural dimensions first so preview and canvas use original pixels
+        // Read natural dimensions so preview and canvas use original pixels
         const probe = new Image();
         probe.onload = () => {
             setImgWidth(probe.naturalWidth);
@@ -193,6 +193,7 @@ const Page = () => {
 
     const previewWidth = imgWidth ?? undefined;
     const previewHeight = imgHeight ?? undefined;
+    const maskReady = Boolean(removedBgImageUrl);
 
     return (
         <>
@@ -250,26 +251,23 @@ const Page = () => {
                             </div>
                             <div
                                 className="border border-border rounded-lg relative overflow-hidden"
-                                style={{
-                                    width: previewWidth,
-                                    height: previewHeight,
-                                }}
+                                style={{ width: previewWidth, height: previewHeight }}
                             >
                                 {isImageSetupDone ? (
                                     <Image
                                         src={selectedImage}
                                         alt="Uploaded"
-                                        layout="fill"
-                                        objectFit="contain"
-                                        objectPosition="center"
-                                        className="absolute inset-0 z-10"
+                                        width={imgWidth ?? 0}
+                                        height={imgHeight ?? 0}
+                                        unoptimized
+                                        style={{ position: 'absolute', inset: 0, zIndex: 10, objectFit: 'contain' as any }}
                                     />
                                 ) : (
                                     <span className="flex items-center w-full gap-2">
                                         <ReloadIcon className="animate-spin" /> Loading, please wait
                                     </span>
                                 )}
-                                {isImageSetupDone &&
+                                {isImageSetupDone && maskReady &&
                                     textSets.map((textSet) => (
                                         <div
                                             key={textSet.id}
@@ -301,11 +299,11 @@ const Page = () => {
                                 {isImageSetupDone && removedBgImageUrl && (
                                     <Image
                                         src={removedBgImageUrl}
-                                        alt="Removed bg"
-                                        layout="fill"
-                                        objectFit="contain"
-                                        objectPosition="center"
-                                        className="absolute top-0 left-0 w-full h-full z-30 pointer-events-none"
+                                        alt="Subject"
+                                        width={imgWidth ?? 0}
+                                        height={imgHeight ?? 0}
+                                        unoptimized
+                                        style={{ position: 'absolute', inset: 0, zIndex: 30, objectFit: 'contain' as any, pointerEvents: 'none' }}
                                     />
                                 )}
                             </div>
