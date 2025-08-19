@@ -4,18 +4,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 
-import { useUser } from '@/hooks/useUser';
-import { useSessionContext, useSupabaseClient } from '@supabase/auth-helpers-react';
+ 
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// removed avatar imports
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+// removed dropdown imports
 import { Separator } from '@/components/ui/separator';
 import { Accordion } from '@/components/ui/accordion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ModeToggle } from '@/components/mode-toggle';
 import { Profile } from '@/types';
-import Authenticate from '@/components/authenticate';
+ 
 import TextCustomizer from '@/components/editor/text-customizer';
 
 import { PlusIcon, ReloadIcon } from '@radix-ui/react-icons';
@@ -23,51 +22,39 @@ import { PlusIcon, ReloadIcon } from '@radix-ui/react-icons';
 import { removeBackground } from "@imgly/background-removal";
 
 import '@/app/fonts.css';
-import PayDialog from '@/components/pay-dialog';
-import AppAds from '@/components/editor/app-ads';
-import FirecrawlAd from '@/ads/firecrawl';
+ 
+// removed ads imports
 
 const Page = () => {
-    const { user } = useUser();
-    const { session } = useSessionContext();
-    const supabaseClient = useSupabaseClient();
-    const [currentUser, setCurrentUser] = useState<Profile>()
+    const [currentUser, setCurrentUser] = useState<Profile | null>(null)
 
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [isImageSetupDone, setIsImageSetupDone] = useState<boolean>(false);
     const [removedBgImageUrl, setRemovedBgImageUrl] = useState<string | null>(null);
     const [textSets, setTextSets] = useState<Array<any>>([]);
-    const [isPayDialogOpen, setIsPayDialogOpen] = useState<boolean>(false); 
+     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const getCurrentUser = async (userId: string) => {
-        try {
-            const { data: profile, error } = await supabaseClient
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-
-            if (error) {
-                throw error;
-            }
-
-            if (profile) {
-                setCurrentUser(profile[0]);
-            }
-        } catch (error) {
-            console.error('Error fetching user profile:', error);
-        }
-    };
+    useEffect(() => {
+        setCurrentUser({
+            id: 'anon',
+            full_name: 'Guest',
+            avatar_url: '',
+            images_generated: 0,
+            paid: true,
+            subscription_id: null
+        } as any)
+    }, [])
 
     const handleUploadImage = () => {
-        if (currentUser && (currentUser.images_generated < 2 || currentUser.paid)) {
+        if (currentUser) {
             if (fileInputRef.current) {
                 fileInputRef.current.click();
             }
         } else {
             alert("You have reached the limit of free generations.");
-            setIsPayDialogOpen(true);
+            
         }
     };
 
@@ -87,13 +74,7 @@ const Page = () => {
             setRemovedBgImageUrl(url);
             setIsImageSetupDone(true);
 
-            if (currentUser) {
-                await supabaseClient
-                    .from('profiles')
-                    .update({ images_generated: currentUser.images_generated + 1 })
-                    .eq('id', currentUser.id) 
-                    .select();
-            }
+            
             
         } catch (error) {
             console.error(error);
@@ -236,20 +217,14 @@ const Page = () => {
         }
     };
 
-    useEffect(() => {
-      if (user?.id) {
-        getCurrentUser(user.id)
-      }
-    }, [user])
+    
     
     return (
         <>
             <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1609710199882100" crossOrigin="anonymous"></script>
-            {user && session && session.user && currentUser ? (
+            {currentUser ? (
                 <div className='flex flex-col h-screen'>
-                    {!currentUser.paid && (
-                        <FirecrawlAd />
-                    )}
+                    
                     <header className='flex flex-row items-center justify-between p-5 px-10'>
                         <h2 className="text-4xl md:text-2xl font-semibold tracking-tight">
                             <span className="block md:hidden">TBI</span>
@@ -265,24 +240,9 @@ const Page = () => {
                             />
                             <div className='flex items-center gap-5'>
                                 <div className='hidden md:block font-semibold'>
-                                    {currentUser.paid ? (
-                                        <p className='text-sm'>
-                                            Unlimited generations
-                                        </p>
-                                    ) : (
-                                        <div className='flex items-center gap-2'>
-                                            <p className='text-sm'>
-                                                {2 - (currentUser.images_generated)} generations left
-                                            </p>
-                                            <Button 
-                                                variant="link" 
-                                                className="p-0 h-auto text-sm text-primary hover:underline"
-                                                onClick={() => setIsPayDialogOpen(true)}
-                                            >
-                                                Upgrade
-                                            </Button>
-                                        </div>
-                                    )}
+                                    <p className='text-sm'>
+                                        Unlimited generations
+                                    </p>
                                 </div>
                                 <div className='flex gap-2'>
                                     <Button onClick={handleUploadImage}>
@@ -296,26 +256,7 @@ const Page = () => {
                                 </div>
                             </div>
                             <ModeToggle />
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Avatar className="cursor-pointer">
-                                        <AvatarImage src={currentUser?.avatar_url} /> 
-                                        <AvatarFallback>TBI</AvatarFallback>
-                                    </Avatar>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-56" align="end">
-                                    <DropdownMenuLabel>
-                                        <div className="flex flex-col space-y-1">
-                                            <p className="text-sm font-medium leading-none">{currentUser?.full_name}</p>
-                                            <p className="text-xs leading-none text-muted-foreground">{user?.user_metadata.email}</p>
-                                        </div>
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => setIsPayDialogOpen(true)}>
-                                        <button>{currentUser?.paid ? 'View Plan' : 'Upgrade to Pro'}</button>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            
                         </div>
                     </header>
                     <Separator /> 
@@ -328,24 +269,9 @@ const Page = () => {
                                         Save image
                                     </Button>
                                     <div className='block md:hidden'>
-                                        {currentUser.paid ? (
-                                            <p className='text-sm'>
-                                                Unlimited generations
-                                            </p>
-                                        ) : (
-                                            <div className='flex items-center gap-5'>
-                                                <p className='text-sm'>
-                                                    {2 - (currentUser.images_generated)} generations left
-                                                </p>
-                                                <Button 
-                                                    variant="link" 
-                                                    className="p-0 h-auto text-sm text-primary hover:underline"
-                                                    onClick={() => setIsPayDialogOpen(true)}
-                                                >
-                                                    Upgrade
-                                                </Button>
-                                            </div>
-                                        )}
+                                        <p className='text-sm'>
+                                            Unlimited generations
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="min-h-[400px] w-[80%] p-4 border border-border rounded-lg relative overflow-hidden">
@@ -398,9 +324,7 @@ const Page = () => {
                                         /> 
                                     )}
                                 </div>
-                                {!currentUser.paid && (
-                                    <AppAds />
-                                )}
+                                
                             </div>
                             <div className='flex flex-col w-full md:w-1/2'>
                                 <Button variant={'secondary'} onClick={addNewTextSet}><PlusIcon className='mr-2'/> Add New Text Set</Button>
@@ -413,7 +337,6 @@ const Page = () => {
                                                 handleAttributeChange={handleAttributeChange}
                                                 removeTextSet={removeTextSet}
                                                 duplicateTextSet={duplicateTextSet}
-                                                userId={currentUser.id}
                                             />
                                         ))}
                                     </Accordion>
@@ -425,11 +348,9 @@ const Page = () => {
                             <h2 className="text-xl font-semibold">Welcome, get started by uploading an image!</h2>
                         </div>
                     )} 
-                    <PayDialog userDetails={currentUser as any} userEmail={user.user_metadata.email} isOpen={isPayDialogOpen} onClose={() => setIsPayDialogOpen(false)} /> 
+                    
                 </div>
-            ) : (
-                <Authenticate />
-            )}
+            ) : null}
         </>
     );
 }

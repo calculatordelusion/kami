@@ -4,7 +4,6 @@ import SliderField from './slider-field';
 import ColorPicker from './color-picker';
 import FontFamilyPicker from './font-picker'; 
 import { Button } from '../ui/button';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import {
   AccordionContent,
   AccordionItem,
@@ -34,32 +33,11 @@ interface TextCustomizerProps {
     handleAttributeChange: (id: number, attribute: string, value: any) => void;
     removeTextSet: (id: number) => void;
     duplicateTextSet: (textSet: any) => void;
-    userId: string;
 }
 
-const TextCustomizer: React.FC<TextCustomizerProps> = ({ textSet, handleAttributeChange, removeTextSet, duplicateTextSet, userId }) => {
+const TextCustomizer: React.FC<TextCustomizerProps> = ({ textSet, handleAttributeChange, removeTextSet, duplicateTextSet }) => {
     const [activeControl, setActiveControl] = useState<string | null>(null);
-    const [isPaidUser, setIsPaidUser] = useState(false);
-    const supabaseClient = useSupabaseClient();
-
-    useEffect(() => { 
-        const checkUserStatus = async () => {
-            try {
-                const { data: profile, error } = await supabaseClient
-                    .from('profiles')
-                    .select('paid')
-                    .eq('id', userId)
-                    .single();
-
-                if (error) throw error;
-                setIsPaidUser(profile?.paid || false);
-            } catch (error) {
-                console.error('Error checking user status:', error);
-            }
-        };
-
-        checkUserStatus();
-    }, [userId, supabaseClient]);
+    const [isPaidUser] = useState(true);
 
     const controls = [
         { id: 'text', icon: <CaseSensitive size={20} />, label: 'Text' },
@@ -121,7 +99,6 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({ textSet, handleAttribut
                                 attribute="fontFamily"
                                 currentFont={textSet.fontFamily}
                                 handleAttributeChange={(attribute, value) => handleAttributeChange(textSet.id, attribute, value)}
-                                userId={userId}
                             />
                         )}
 
@@ -262,7 +239,6 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({ textSet, handleAttribut
                             attribute="fontFamily"
                             currentFont={textSet.fontFamily}
                             handleAttributeChange={(attribute, value) => handleAttributeChange(textSet.id, attribute, value)}
-                            userId={userId}
                         />
                         <ColorPicker
                             attribute="color"
