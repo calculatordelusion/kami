@@ -24,6 +24,9 @@ const Page = () => {
     const [removedBgImageUrl, setRemovedBgImageUrl] = useState<string | null>(null);
     const [textSets, setTextSets] = useState<Array<any>>([]);
 
+    const [imgWidth, setImgWidth] = useState<number | null>(null);
+    const [imgHeight, setImgHeight] = useState<number | null>(null);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -49,20 +52,27 @@ const Page = () => {
         if (!file) return;
 
         const imageUrl = URL.createObjectURL(file);
-        setSelectedImage(imageUrl);
-        // Show the uploaded image immediately
-        setIsImageSetupDone(true);
-        setRemovedBgImageUrl(null);
 
-        // Run background removal asynchronously; if it fails, we keep the original image
-        removeBackground(imageUrl)
-            .then((imageBlob) => {
-                const url = URL.createObjectURL(imageBlob);
-                setRemovedBgImageUrl(url);
-            })
-            .catch((err) => {
-                console.error('Background removal failed, using original image only.', err);
-            });
+        // Read natural dimensions first so preview and canvas use original pixels
+        const probe = new Image();
+        probe.onload = () => {
+            setImgWidth(probe.naturalWidth);
+            setImgHeight(probe.naturalHeight);
+            setSelectedImage(imageUrl);
+            setIsImageSetupDone(true);
+            setRemovedBgImageUrl(null);
+
+            // Background removal async. When ready, overlay subject on top for preview
+            removeBackground(imageUrl)
+                .then((imageBlob) => {
+                    const url = URL.createObjectURL(imageBlob);
+                    setRemovedBgImageUrl(url);
+                })
+                .catch((err) => {
+                    console.error('Background removal failed, using original image only.', err);
+                });
+        };
+        probe.src = imageUrl;
     };
 
     const addNewTextSet = () => {
@@ -167,7 +177,6 @@ const Page = () => {
                 };
                 fg.src = removedBgImageUrl;
             } else {
-                // Fallback: no subject mask available, just download with text on top
                 triggerDownload();
             }
         };
@@ -181,6 +190,9 @@ const Page = () => {
             link.click();
         }
     };
+
+    const previewWidth = imgWidth ?? undefined;
+    const previewHeight = imgHeight ?? undefined;
 
     return (
         <>
@@ -236,7 +248,13 @@ const Page = () => {
                                     </div>
                                 )}
                             </div>
-                            <div className="min-h-[400px] w-[80%] p-4 border border-border rounded-lg relative overflow-hidden">
+                            <div
+                                className="border border-border rounded-lg relative overflow-hidden"
+                                style={{
+                                    width: previewWidth,
+                                    height: previewHeight,
+                                }}
+                            >
                                 {isImageSetupDone ? (
                                     <Image
                                         src={selectedImage}
