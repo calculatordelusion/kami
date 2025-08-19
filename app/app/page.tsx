@@ -46,22 +46,23 @@ const Page = () => {
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            const imageUrl = URL.createObjectURL(file);
-            setSelectedImage(imageUrl);
-            await setupImage(imageUrl);
-        }
-    };
+        if (!file) return;
 
-    const setupImage = async (imageUrl: string) => {
-        try {
-            const imageBlob = await removeBackground(imageUrl);
-            const url = URL.createObjectURL(imageBlob);
-            setRemovedBgImageUrl(url);
-            setIsImageSetupDone(true);
-        } catch (error) {
-            console.error(error);
-        }
+        const imageUrl = URL.createObjectURL(file);
+        setSelectedImage(imageUrl);
+        // Show the uploaded image immediately
+        setIsImageSetupDone(true);
+        setRemovedBgImageUrl(null);
+
+        // Run background removal asynchronously; if it fails, we keep the original image
+        removeBackground(imageUrl)
+            .then((imageBlob) => {
+                const url = URL.createObjectURL(imageBlob);
+                setRemovedBgImageUrl(url);
+            })
+            .catch((err) => {
+                console.error('Background removal failed, using original image only.', err);
+            });
     };
 
     const addNewTextSet = () => {
@@ -102,7 +103,7 @@ const Page = () => {
     };
 
     const saveCompositeImage = () => {
-        if (!canvasRef.current || !isImageSetupDone) return;
+        if (!canvasRef.current || !isImageSetupDone || !selectedImage) return;
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
@@ -114,11 +115,12 @@ const Page = () => {
             canvas.width = bgImg.width;
             canvas.height = bgImg.height;
 
+            // 1) Draw original background
             ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
+            // 2) Draw text (behind the subject)
             textSets.forEach((textSet) => {
                 ctx.save();
-
                 ctx.font = `${textSet.fontWeight} ${textSet.fontSize * 3}px ${textSet.fontFamily}`;
                 ctx.fillStyle = textSet.color;
                 ctx.globalAlpha = textSet.opacity;
@@ -133,16 +135,7 @@ const Page = () => {
 
                 const tiltXRad = (-textSet.tiltX * Math.PI) / 180;
                 const tiltYRad = (-textSet.tiltY * Math.PI) / 180;
-
-                ctx.transform(
-                    Math.cos(tiltYRad),
-                    Math.sin(0),
-                    -Math.sin(0),
-                    Math.cos(tiltXRad),
-                    0,
-                    0
-                );
-
+                ctx.transform(Math.cos(tiltYRad), Math.sin(0), -Math.sin(0), Math.cos(tiltXRad), 0, 0);
                 ctx.rotate((textSet.rotation * Math.PI) / 180);
 
                 if (textSet.letterSpacing === 0) {
@@ -154,9 +147,7 @@ const Page = () => {
                         const charWidth = ctx.measureText(char).width;
                         return width + charWidth + (i < chars.length - 1 ? textSet.letterSpacing : 0);
                     }, 0);
-
                     currentX = -totalWidth / 2;
-
                     chars.forEach((char: string) => {
                         const charWidth = ctx.measureText(char).width;
                         ctx.fillText(char, currentX + charWidth / 2, 0);
@@ -166,19 +157,21 @@ const Page = () => {
                 ctx.restore();
             });
 
+            // 3) Draw the foreground (subject) on top if we have it
             if (removedBgImageUrl) {
-                const removedBgImg = new (window as any).Image();
-                removedBgImg.crossOrigin = 'anonymous';
-                removedBgImg.onload = () => {
-                    ctx.drawImage(removedBgImg, 0, 0, canvas.width, canvas.height);
+                const fg = new (window as any).Image();
+                fg.crossOrigin = 'anonymous';
+                fg.onload = () => {
+                    ctx.drawImage(fg, 0, 0, canvas.width, canvas.height);
                     triggerDownload();
                 };
-                removedBgImg.src = removedBgImageUrl;
+                fg.src = removedBgImageUrl;
             } else {
+                // Fallback: no subject mask available, just download with text on top
                 triggerDownload();
             }
         };
-        bgImg.src = selectedImage || '';
+        bgImg.src = selectedImage;
 
         function triggerDownload() {
             const dataUrl = canvas.toDataURL('image/png');
@@ -235,9 +228,13 @@ const Page = () => {
                                 <Button onClick={saveCompositeImage} className="md:hidden">
                                     Save image
                                 </Button>
-                                <div className="block md:hidden">
-                                    <p className="text-sm">Unlimited generations</p>
-                                </div>
+                                {!isImageSetupDone && (
+                                    <div className="block md:hidden">
+                                        <span className="flex items-center w-full gap-2">
+                                            <ReloadIcon className="animate-spin" /> Loading, please wait
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                             <div className="min-h-[400px] w-[80%] p-4 border border-border rounded-lg relative overflow-hidden">
                                 {isImageSetupDone ? (
@@ -275,7 +272,7 @@ const Page = () => {
                                             {textSet.text}
                                         </div>
                                     ))}
-                                {removedBgImageUrl && (
+                                {isImageSetupDone && removedBgImageUrl && (
                                     <Image
                                         src={removedBgImageUrl}
                                         alt="Removed bg"
