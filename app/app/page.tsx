@@ -238,7 +238,14 @@ const Page = () => {
                             </div>
                             <div className="min-h-[400px] w-[80%] p-4 border border-border rounded-lg relative overflow-hidden">
                                 {isImageSetupDone ? (
-                                    <Image src={selectedImage} alt="Uploaded" layout="fill" objectFit="contain" objectPosition="center" />
+                                    <Image
+                                        src={selectedImage}
+                                        alt="Uploaded"
+                                        layout="fill"
+                                        objectFit="contain"
+                                        objectPosition="center"
+                                        className="absolute inset-0 z-10"
+                                    />
                                 ) : (
                                     <span className="flex items-center w-full gap-2">
                                         <ReloadIcon className="animate-spin" /> Loading, please wait
@@ -267,6 +274,7 @@ const Page = () => {
                                                 opacity: textSet.opacity,
                                                 letterSpacing: `${textSet.letterSpacing}px`,
                                                 transformStyle: 'preserve-3d',
+                                                zIndex: 20,
                                             }}
                                         >
                                             {textSet.text}
@@ -279,7 +287,7 @@ const Page = () => {
                                         layout="fill"
                                         objectFit="contain"
                                         objectPosition="center"
-                                        className="absolute top-0 left-0 w-full h-full"
+                                        className="absolute top-0 left-0 w-full h-full z-30 pointer-events-none"
                                     />
                                 )}
                             </div>
